@@ -1,10 +1,11 @@
-import {CommandFactory} from "./commands";
+import { CommandFactory } from "./commands";
 import * as utils from "./utils";
 import * as vscode from "vscode";
-import {isCueNotFoundError} from "./error";
+import { isCueNotFoundError } from "./error";
 
 // Handler for command `cue.lint.*`
 export function createCommandCueLint(
+  channel: vscode.OutputChannel,
   diagnosticCollection: vscode.DiagnosticCollection
 ): CommandFactory {
   return (ctx) => async () => {
@@ -23,20 +24,23 @@ export function createCommandCueLint(
     const document = editor.document;
     const lintFlags: string[] =
       utils.getCueConfig(document.uri).get("lintFlags") || [];
-    await cueLint(document, diagnosticCollection, lintFlags);
+    await cueLint(channel, document, diagnosticCollection, lintFlags);
   };
 }
 
 export async function cueLint(
+  channel: vscode.OutputChannel,
   document: vscode.TextDocument,
   diagCollection: vscode.DiagnosticCollection,
-  lintFlags: string[]
+  lintFlags: string[],
+  workspaceFolders?: readonly vscode.WorkspaceFolder[]
 ) {
   try {
-    const {stderr} = await utils.runCue(
+    const { stderr } = await utils.runCue(channel,
       ["vet", document.uri.fsPath, ...lintFlags],
-      {cwd: utils.getConfigModuleRoot()}
+      { cwd: await utils.getConfigModuleRoot(channel, document.uri, workspaceFolders) }
     );
+    channel.appendLine(stderr)
     const diagnostics = handleDiagnosticMessages(stderr);
     diagCollection.set(document.uri, diagnostics);
   } catch (e) {
@@ -71,7 +75,7 @@ export function handleDiagnosticMessages(content: string): vscode.Diagnostic[] {
 
   for (const line of lines) {
     // type: error location
-    if (line.startsWith("  ")) {
+    if (line.startsWith("  ") && !errorMsg.includes("incomplete value")) {
       // '    <file-path>:<line-number>:<column-number>'
       const m = re.exec(line);
       if (m) {

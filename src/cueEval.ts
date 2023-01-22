@@ -1,9 +1,9 @@
-import {CommandFactory} from "./commands";
+import { CommandFactory } from "./commands";
 import * as vscode from "vscode";
 import * as utils from "./utils";
 import path = require("path");
 import fsp = require("fs/promises");
-import {isCueNotFoundError} from "./error";
+import { isCueNotFoundError } from "./error";
 
 export const OUT_TYPE_VALUES = ["yaml", "json", "text", "cue"] as const;
 export type OutType = typeof OUT_TYPE_VALUES[number];
@@ -17,7 +17,7 @@ function outTypeToExt(t: OutType) {
   }
 }
 
-export function createCommandCueEval(opts: {
+export function createCommandCueEval(channel: vscode.OutputChannel, opts: {
   useExpression: boolean;
   outType: OutType | "select";
 }): CommandFactory {
@@ -67,7 +67,7 @@ export function createCommandCueEval(opts: {
     }
 
     try {
-      const content = await cueEval({
+      const content = await cueEval(channel, {
         filePath: document.uri.fsPath,
         outType,
         expressions,
@@ -75,7 +75,7 @@ export function createCommandCueEval(opts: {
 
       // TODO: dispose the temp dir
       // create temp dir
-      const {path: tmpDir} = utils.makeTempDir("eval");
+      const { path: tmpDir } = utils.makeTempDir("eval");
 
       const tmpFile = path.join(tmpDir, `eval.${outTypeToExt(outType)}`);
       await fsp.writeFile(tmpFile, content);
@@ -94,7 +94,7 @@ export function createCommandCueEval(opts: {
   };
 }
 
-export async function cueEval(opts: {
+export async function cueEval(channel: vscode.OutputChannel, opts: {
   filePath: string;
   expressions: string[];
   outType: OutType;
@@ -115,8 +115,8 @@ export async function cueEval(opts: {
     args.push(`--out`, opts.outType);
   }
 
-  const {stdout, stderr, code} = await utils.runCue(args, {
-    cwd: utils.getConfigModuleRoot(),
+  const { stdout, stderr, code } = await utils.runCue(channel, args, {
+    cwd: await utils.getConfigModuleRoot(channel),
   });
   if (code !== 0) {
     throw new Error(

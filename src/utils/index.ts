@@ -7,10 +7,10 @@ import fs = require("fs");
 import path = require("path");
 import os = require("os");
 import process = require("process");
-import {CueNotFoundError} from "../error";
-import {vscodeVariables} from "./vscode_variables";
+import { CueNotFoundError } from "../error";
+import { vscodeVariables } from "./vscode_variables";
 
-export {vscodeVariables} from "./vscode_variables";
+export { vscodeVariables } from "./vscode_variables";
 
 export function getCueConfig(uri?: vscode.Uri): vscode.WorkspaceConfiguration {
   return getConfig("cue", uri);
@@ -30,14 +30,42 @@ export function getConfig(
   return vscode.workspace.getConfiguration(section, uri);
 }
 
-export function getConfigModuleRoot(uri?: vscode.Uri): string {
+const readdirAsync = (dir: string): Promise<string[]> => {
+  return new Promise((res, rej) => fs.readdir(dir, (err, files) => {
+    if (err) rej(err);
+    return res(files);
+  }))
+}
+
+export const resolveModuleRoot = async (workspaceRoot: string, root: string): Promise<string> => {
+  const files = await readdirAsync(root);
+  const validFiles = files.filter(file => file.endsWith("cue.mod"))
+  if (validFiles.length == 0) {
+    if (root == workspaceRoot) {
+      throw new Error("No cue.mod in entire root");
+    }
+    return resolveModuleRoot(workspaceRoot, path.dirname(root));
+  }
+  return root;
+}
+export const getConfigModuleRoot = async (channel: vscode.OutputChannel, uri?: vscode.Uri, workspaceFolders?: readonly vscode.WorkspaceFolder[]): Promise<string> => {
+
+  const config = getCueConfig(uri).get("moduleRoot") as string;
+
   let moduleRoot: string =
-    getCueConfig(uri).get("moduleRoot") || "${workspaceFolder}";
+    config || "${workspaceFolder}";
 
   moduleRoot = vscodeVariables(moduleRoot, false);
+
   if (!moduleRoot) {
     moduleRoot = process.cwd();
   }
+
+  if (uri?.path) {
+    moduleRoot = await resolveModuleRoot(moduleRoot, path.dirname(uri.path));
+  }
+
+  // channel.appendLine(`ModRoot: ${moduleRoot}`)
 
   return moduleRoot as string;
 }
@@ -61,6 +89,7 @@ export function promptNoCue() {
 }
 
 export function runCue(
+  channel: vscode.OutputChannel,
   args: string[],
   options?: cp.SpawnOptionsWithoutStdio
 ): Promise<{
@@ -69,8 +98,8 @@ export function runCue(
   code: number;
 }> {
   return new Promise((resolve, reject) => {
-    let child = cp.spawn("cue", args, options);
-
+    let child = cp.spawn("cue", args.concat(["-c"]), options);
+    channel.appendLine(`cue ${args} --- ${options}`)
     const output = {
       stdout: "",
       stderr: "",
@@ -119,7 +148,7 @@ export function makeTempDir(prefix?: string): {
   return {
     path: dirPath,
     dispose: () => {
-      fs.rmSync(dirPath, {recursive: true, force: true});
+      fs.rmSync(dirPath, { recursive: true, force: true });
     },
   };
 }
@@ -127,7 +156,7 @@ export function makeTempDir(prefix?: string): {
 export function cleanupTempDir() {
   if (tmpDir) {
     if (fs.existsSync(tmpDir)) {
-      fs.rmSync(tmpDir, {recursive: true});
+      fs.rmSync(tmpDir, { recursive: true });
     }
   }
   tmpDir = undefined;
@@ -143,7 +172,7 @@ export function dirBaseName(p: string): {
   };
 }
 
-export function isErrorWithMessage(error: unknown): error is {message: string} {
+export function isErrorWithMessage(error: unknown): error is { message: string } {
   return (
     typeof error === "object" &&
     error !== null &&

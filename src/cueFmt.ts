@@ -3,11 +3,15 @@ import * as utils from "./utils";
 
 import fsp = require("fs/promises");
 import path = require("path");
-import {isCueNotFoundError} from "./error";
+import { isCueNotFoundError } from "./error";
 
 export class CueDocumentFormattingEditProvider
-  implements vscode.DocumentFormattingEditProvider
-{
+  implements vscode.DocumentFormattingEditProvider {
+
+  vscodeChannel: vscode.OutputChannel;
+  constructor(vscodeChannel: vscode.OutputChannel) {
+    this.vscodeChannel = vscodeChannel
+  }
   provideDocumentFormattingEdits(
     document: vscode.TextDocument,
     options: vscode.FormattingOptions,
@@ -28,7 +32,7 @@ export class CueDocumentFormattingEditProvider
         await fsp.writeFile(tmpFile, document.getText());
 
         // run cue fmt
-        await utils.runCue(["fmt", tmpFile]);
+        await utils.runCue(this.vscodeChannel, ["fmt", tmpFile]);
 
         // read the output file
         const output = await fsp.readFile(tmpFile, "utf8");

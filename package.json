@@ -1,19 +1,19 @@
 {
 	"name": "vscode-cuelang",
 	"displayName": "vscode-cuelang",
-	"description": "Language support for Cue",
+	"description": "Language support for Cue (Feline Version)",
 	"version": "0.0.4",
 	"author": {
-		"name": "brody715"
+		"name": "felinellc"
 	},
-	"publisher": "brody715",
+	"publisher": "felinellc",
 	"engines": {
 		"vscode": "^1.50.0"
 	},
 	"icon": "images/cue.png",
 	"license": "MIT",
 	"repository": {
-		"url": "https://github.com/brody715/vscode-cuelang"
+		"url": "https://github.com/felinellc/vscode-cuelang"
 	},
 	"categories": [
 		"Programming Languages",
@@ -88,6 +88,20 @@
 					"description": "Lints code on file using `cue`",
 					"scope": "resource"
 				},
+				"cue.lintOnChange": {
+					"type": "string",
+					"enum": [
+						"file",
+						"off"
+					],
+					"enumDescriptions": [
+						"lint the current file on file change",
+						"do not run lint automatically"
+					],
+					"default": "file",
+					"description": "Lints code on file using `cue`",
+					"scope": "resource"
+				},
 				"cue.lintFlags": {
 					"type": "array",
 					"items": {
@@ -116,7 +130,8 @@
 		"test": "node ./out/test/runTest.js",
 		"pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
 		"lint": "eslint src --ext ts",
-		"sync-syntax": " wget https://raw.githubusercontent.com/shikijs/shiki/main/packages/shiki/languages/cue.tmLanguage.json -O syntaxes/cue.tmLanguage.json"
+		"sync-syntax": " wget https://raw.githubusercontent.com/shikijs/shiki/main/packages/shiki/languages/cue.tmLanguage.json -O syntaxes/cue.tmLanguage.json",
+		"installDev": "yarn run package && vsce package --allow-star-activation && code --install-extension vscode-cuelang-0.0.4.vsix"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.2.0",
@@ -137,7 +152,7 @@
 	},
 	"__metadata": {
 		"id": "ec749621-363b-4d8e-ba1b-9ce3204f085e",
-		"publisherDisplayName": "brody715",
+		"publisherDisplayName": "felinellc",
 		"publisherId": "0fe54e16-1486-461c-99c7-f1931d62764f",
 		"isPreReleaseVersion": false,
 		"targetPlatform": "undefined",
